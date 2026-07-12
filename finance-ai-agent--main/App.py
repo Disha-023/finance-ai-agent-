@@ -66,33 +66,33 @@ if st.button("Analyze Stock"):
 
     st.subheader("Latest News")
 
-    if company_name:
+    # if company_name:
 
-        news = get_company_news(company_name)
+    #     news = get_company_news(company_name)
 
-        st.write(f"Searching News For: {company_name}")
-        st.write(f"Articles Found: {len(news)}")
+    #     st.write(f"Searching News For: {company_name}")
+    #     st.write(f"Articles Found: {len(news)}")
 
-        if news:
+    #     if news:
 
-            for article in news:
+    #         for article in news:
 
-                st.markdown(f"### {article.get('title')}")
+    #             st.markdown(f"### {article.get('title')}")
 
-                if article.get("description"):
-                   st.write(article["description"])
+    #             if article.get("description"):
+    #                st.write(article["description"])
 
-                if article.get("url"):
-                   st.markdown(f"[Read Full Article]({article['url']})")
+    #             if article.get("url"):
+    #                st.markdown(f"[Read Full Article]({article['url']})")
 
-                st.write("---")
+    #             st.write("---")
 
-        else:
+    #     else:
 
-            st.warning("No News Found")
+    #         st.warning("No News Found")
 
-    else:
+    # else:
 
-        st.error("Company name not found.")
+    #     st.error("Company name not found.")
 
        
