@@ -6,8 +6,6 @@ from services.stock_services import (
     get_stock_history
 )
 
-from services.news_services import get_company_news
-
 st.set_page_config(
     page_title="Financial Research AI",
     layout="wide"
