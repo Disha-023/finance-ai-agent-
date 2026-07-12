@@ -4,7 +4,6 @@ from urllib.parse import quote
 
 def get_company_news(company_name):
 
-    # Remove common suffixes
     company_name = (
         company_name.replace("Limited", "")
         .replace("Ltd.", "")
