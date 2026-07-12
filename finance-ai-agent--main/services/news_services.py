@@ -1,30 +1,30 @@
-import feedparser
-from urllib.parse import quote
+# import feedparser
+# from urllib.parse import quote
 
 
-def get_company_news(company_name):
+# def get_company_news(company_name):
 
-    company_name = (
-        company_name.replace("Limited", "")
-        .replace("Ltd.", "")
-        .replace("Ltd", "")
-        .strip()
-    )
+#     company_name = (
+#         company_name.replace("Limited", "")
+#         .replace("Ltd.", "")
+#         .replace("Ltd", "")
+#         .strip()
+#     )
 
-    query = quote(company_name)
+#     query = quote(company_name)
 
-    url = f"https://news.google.com/rss/search?q={query}"
+#     url = f"https://news.google.com/rss/search?q={query}"
 
-    feed = feedparser.parse(url)
+#     feed = feedparser.parse(url)
 
-    articles = []
+#     articles = []
 
-    for entry in feed.entries[:5]:
+#     for entry in feed.entries[:5]:
 
-        articles.append({
-            "title": entry.title,
-            "description": entry.summary,
-            "url": entry.link
-        })
+#         articles.append({
+#             "title": entry.title,
+#             "description": entry.summary,
+#             "url": entry.link
+#         })
 
-    return articles
+#     return articles
