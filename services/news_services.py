@@ -1,30 +1,50 @@
-# import feedparser
-# from urllib.parse import quote
+# ----------------------------------------------------
+# NEWS SERVICE MODULE
+#
+# Purpose:
+# Fetch recent company-related news articles using
+# Google News RSS feed.
+#
+# Status:
+# Temporarily disabled for testing and debugging.
+#
+# Future Enhancement:
+# Integrate live news analysis using LLMs to generate
+# market sentiment and investment insights.
+# ----------------------------------------------------
 
 
-# def get_company_news(company_name):
+import feedparser
+from urllib.parse import quote
 
-#     company_name = (
-#         company_name.replace("Limited", "")
-#         .replace("Ltd.", "")
-#         .replace("Ltd", "")
-#         .strip()
-#     )
 
-#     query = quote(company_name)
+def get_company_news(company_name):
 
-#     url = f"https://news.google.com/rss/search?q={query}"
+    # Remove common company suffixes to improve news search accuracy
+    company_name = (
+        company_name.replace("Limited", "")
+        .replace("Ltd.", "")
+        .replace("Ltd", "")
+        .strip()
+    )
 
-#     feed = feedparser.parse(url)
+    # Convert company name into URL-safe format
+    query = quote(company_name)
 
-#     articles = []
+    # Google News RSS Search URL 
+    url = f"https://news.google.com/rss/search?q={query}"
 
-#     for entry in feed.entries[:5]:
+    # Fetch and parse RSS Feed
+    feed = feedparser.parse(url)
 
-#         articles.append({
-#             "title": entry.title,
-#             "description": entry.summary,
-#             "url": entry.link
-#         })
+    articles = []
 
-#     return articles
+    for entry in feed.entries[:5]:
+
+        articles.append({
+            "title": entry.title,
+            "description": entry.summary,
+            "url": entry.link
+        })
+
+    return articles

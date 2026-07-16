@@ -6,6 +6,11 @@ from services.stock_services import (
     get_stock_history
 )
 
+# Import News Function
+from services.news_services import (
+    get_company_news
+)
+
 st.set_page_config(
     page_title="Financial Research AI",
     layout="wide"
@@ -36,9 +41,30 @@ if st.button("Analyze Stock"):
 
     st.subheader("Company Information")
 
-    st.write(data)
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Current Price", data.get("Current Price"))
+
+        st.metric("Open", data.get("Open"))
+
+    with col2:
+        st.metric("High", data.get("High"))
+
+        st.metric("Low", data.get("Low"))
+
+    with col3:
+        st.metric("Volume", data.get("Volume"))
+
+        st.metric("Previous Close", data.get("Previous Close"))
+
+    st.info(f"Market Cap: ₹{data.get('Market Cap')}")
 
     history = get_stock_history(symbol, period)
+
+    if history is None or history.empty:
+        st.error("No data found for the selected Symbol")
+        st.stop()
 
     fig = go.Figure()
 
@@ -64,35 +90,46 @@ if st.button("Analyze Stock"):
 
     company_name = data.get("Company")
 
+
+    # ------ NEWS MODEL ------
+    # This section fetches recent company-related news articles 
+    # Using Google News RSS feed and displays them inside Streamlit
+
     st.subheader("Latest News")
 
-    # if company_name:
 
-    #     news = get_company_news(company_name)
+    # NOTE :
+    # Previously this block was commented out, which caused the application to display only the "Latest News" heading without fetching any news articles
 
-    #     st.write(f"Searching News For: {company_name}")
-    #     st.write(f"Articles Found: {len(news)}")
 
-    #     if news:
+    if company_name:
 
-    #         for article in news:
+        news = get_company_news(company_name)
 
-    #             st.markdown(f"### {article.get('title')}")
+        st.write(f"Searching News For: {company_name}")
+        st.write(f"Articles Found: {len(news)}")
 
-    #             if article.get("description"):
-    #                st.write(article["description"])
+        if news:
 
-    #             if article.get("url"):
-    #                st.markdown(f"[Read Full Article]({article['url']})")
+            for article in news:
 
-    #             st.write("---")
+                st.markdown(f"### {article.get('title')}")
 
-    #     else:
+                # Display article summary only if available 
+                # if article.get("description"):
+                #    st.caption(article["description"][:200] + "...")
 
-    #         st.warning("No News Found")
+                if article.get("url"):
+                   st.link_button("Read Full Article", article["url"])
 
-    # else:
+                st.write("---")
 
-    #     st.error("Company name not found.")
+        else:
+
+            st.warning("No News Found")
+
+    else:
+
+        st.error("Company name not found.")
 
        
