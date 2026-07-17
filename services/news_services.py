@@ -1,26 +1,14 @@
-# ----------------------------------------------------
-# NEWS SERVICE MODULE
-#
-# Purpose:
-# Fetch recent company-related news articles using
-# Google News RSS feed.
-#
-# Status:
-# Temporarily disabled for testing and debugging.
-#
-# Future Enhancement:
-# Integrate live news analysis using LLMs to generate
-# market sentiment and investment insights.
-# ----------------------------------------------------
+import os
+import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 
-import feedparser
-from urllib.parse import quote
+API_KEY = os.getenv("NEWS_API_KEY")
 
 
 def get_company_news(company_name):
 
-    # Remove common company suffixes to improve news search accuracy
     company_name = (
         company_name.replace("Limited", "")
         .replace("Ltd.", "")
@@ -28,23 +16,34 @@ def get_company_news(company_name):
         .strip()
     )
 
-    # Convert company name into URL-safe format
-    query = quote(company_name)
+    url = "https://newsapi.org/v2/everything"
 
-    # Google News RSS Search URL 
-    url = f"https://news.google.com/rss/search?q={query}"
+    params = {
+        "q": company_name,
+        "searchIn": "title,description",
+        "language": "en",
+        "sortBy": "publishedAt",
+        "pageSize": 5,
+        "apiKey": API_KEY,
+    }
 
-    # Fetch and parse RSS Feed
-    feed = feedparser.parse(url)
+    response = requests.get(url, params=params)
+
+    if response.status_code != 200:
+        return []
+
+    data = response.json()
 
     articles = []
 
-    for entry in feed.entries[:5]:
+    for article in data.get("articles", []):
 
         articles.append({
-            "title": entry.title,
-            "description": entry.summary,
-            "url": entry.link
+            "title": article.get("title"),
+            "description": article.get("description"),
+            "url": article.get("url"),
+            "source": article.get("source", {}).get("name"),
+            "publishedAt": article.get("publishedAt"),
         })
 
     return articles

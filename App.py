@@ -4,7 +4,7 @@ import yfinance as yf
 
 from services.stock_services import (
     get_stock_info,
-    get_stock_history
+    get_stock_history,
 )
 
 # Import News Function
@@ -14,16 +14,21 @@ from services.news_services import (
 
 st.set_page_config(
     page_title="Financial Research AI",
-    layout="wide"
+    layout="wide",
 )
 
-st.title(" Financial Research AI Agent")
+st.title("📈 Financial Research AI Agent")
+
+
+# --------------------------------------------------
+# User Inputs
+# --------------------------------------------------
 
 st.markdown("""Analyze stocks, market trends, company fundamentals and financial news using AI-powered insights""")
 
 symbol = st.text_input(
     "Enter Stock Symbol",
-    "RELIANCE.NS"
+    value="RELIANCE.NS"
 )
 
 period = st.selectbox(
@@ -34,11 +39,20 @@ period = st.selectbox(
         "6mo",
         "1y",
         "2y",
-        "5y"
-    ]
+        "5y",
+    ],
 )
 
+
+# --------------------------------------------------
+# Analyze Button
+# --------------------------------------------------
+
 if st.button("Analyze Stock"):
+
+    # ==========================================
+    # Company Information
+    # ==========================================
 
     data = get_stock_info(symbol)
 
@@ -147,6 +161,10 @@ if st.button("Analyze Stock"):
 
 
 
+    # ==========================================
+    # Stock Price Chart
+    # ==========================================
+
     history = get_stock_history(symbol, period)
 
     if history is None or history.empty:
@@ -160,63 +178,74 @@ if st.button("Analyze Stock"):
             x=history.index,
             y=history["Close"],
             mode="lines",
-            name="Closing Price"
+            name="Closing Price",
         )
     )
 
     fig.update_layout(
         title=f"{symbol} Closing Price",
         xaxis_title="Date",
-        yaxis_title="Price (₹)"
+        yaxis_title="Price (₹)",
+        template="plotly_white",
     )
 
     st.plotly_chart(
         fig,
-        use_container_width=True
+        use_container_width=True,
     )
+
+    # ==========================================
+    # Latest News
+    # ==========================================
+
+    st.subheader("📰 Latest News")
 
     company_name = data.get("Company")
 
 
+
     # ------ NEWS MODEL ------
     # This section fetches recent company-related news articles 
-    # Using Google News RSS feed and displays them inside Streamlit
-
-    st.subheader("Latest News")
-
-
-    # NOTE :
-    # Previously this block was commented out, which caused the application to display only the "Latest News" heading without fetching any news articles
-
+    # Using News API and displays them inside Streamlit
 
     if company_name:
 
+        st.write(f"Searching News For: **{company_name}**")
+
         news = get_company_news(company_name)
 
-        st.write(f"Searching News For: {company_name}")
-        st.write(f"Articles Found: {len(news)}")
+        
 
         if news:
 
+            st.success(f"Found {len(news)} Articles")
+
             for article in news:
 
-                st.markdown(f"### {article.get('title')}")
+                st.markdown(f"### {article['title']}")
 
-                # Display article summary only if available 
-                # if article.get("description"):
-                #    st.caption(article["description"][:200] + "...")
+                if article.get("description"):
+                    st.write(article["description"])
+
+                if article.get("source"):
+                    st.caption(f"📰 Source: {article['source']}")
+
+                if article.get("publishedAt"):
+                    st.caption(
+                        f"📅 Published: {article['publishedAt'][:10]}"
+                    )
 
                 if article.get("url"):
-                   st.link_button("Read Full Article", article["url"])
+                    st.link_button(
+                        "🔗 Read Full Article",
+                        article["url"],
+                    )
 
-                st.write("---")
+                st.divider()
 
         else:
+            st.warning("No news found.")
 
-            st.warning("No News Found")
 
     else:
-
         st.error("Company name not found.")
-
-       
