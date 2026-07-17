@@ -3,19 +3,31 @@ import plotly.graph_objects as go
 
 from services.stock_services import (
     get_stock_info,
-    get_stock_history
+    get_stock_history,
 )
+
+from services.news_services import get_company_news
+
+
+# --------------------------------------------------
+# Page Configuration
+# --------------------------------------------------
 
 st.set_page_config(
     page_title="Financial Research AI",
-    layout="wide"
+    layout="wide",
 )
 
-st.title(" Financial Research AI Agent")
+st.title("📈 Financial Research AI Agent")
+
+
+# --------------------------------------------------
+# User Inputs
+# --------------------------------------------------
 
 symbol = st.text_input(
     "Enter Stock Symbol",
-    "RELIANCE.NS"
+    value="RELIANCE.NS"
 )
 
 period = st.selectbox(
@@ -26,73 +38,105 @@ period = st.selectbox(
         "6mo",
         "1y",
         "2y",
-        "5y"
-    ]
+        "5y",
+    ],
 )
+
+
+# --------------------------------------------------
+# Analyze Button
+# --------------------------------------------------
 
 if st.button("Analyze Stock"):
 
+    # ==========================================
+    # Company Information
+    # ==========================================
+
     data = get_stock_info(symbol)
 
-    st.subheader("Company Information")
-
+    st.subheader("🏢 Company Information")
     st.write(data)
+
+    # ==========================================
+    # Stock Price Chart
+    # ==========================================
 
     history = get_stock_history(symbol, period)
 
-    fig = go.Figure()
+    if history is not None and not history.empty:
 
-    fig.add_trace(
-        go.Scatter(
-            x=history.index,
-            y=history["Close"],
-            mode="lines",
-            name="Closing Price"
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["Close"],
+                mode="lines",
+                name="Closing Price",
+            )
         )
-    )
 
-    fig.update_layout(
-        title=f"{symbol} Closing Price",
-        xaxis_title="Date",
-        yaxis_title="Price (₹)"
-    )
+        fig.update_layout(
+            title=f"{symbol} Closing Price",
+            xaxis_title="Date",
+            yaxis_title="Price (₹)",
+            template="plotly_white",
+        )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+        )
+
+    else:
+        st.error("Unable to fetch stock history.")
+
+    # ==========================================
+    # Latest News
+    # ==========================================
+
+    st.subheader("📰 Latest News")
 
     company_name = data.get("Company")
 
-    st.subheader("Latest News")
+    if company_name:
 
-    # if company_name:
+        st.write(f"Searching News For: **{company_name}**")
 
-    #     news = get_company_news(company_name)
+        news = get_company_news(company_name)
 
-    #     st.write(f"Searching News For: {company_name}")
-    #     st.write(f"Articles Found: {len(news)}")
+        
 
-    #     if news:
+        if news:
 
-    #         for article in news:
+            st.success(f"Found {len(news)} Articles")
 
-    #             st.markdown(f"### {article.get('title')}")
+            for article in news:
 
-    #             if article.get("description"):
-    #                st.write(article["description"])
+                st.markdown(f"### {article['title']}")
 
-    #             if article.get("url"):
-    #                st.markdown(f"[Read Full Article]({article['url']})")
+                if article.get("description"):
+                    st.write(article["description"])
 
-    #             st.write("---")
+                if article.get("source"):
+                    st.caption(f"📰 Source: {article['source']}")
 
-    #     else:
+                if article.get("publishedAt"):
+                    st.caption(
+                        f"📅 Published: {article['publishedAt'][:10]}"
+                    )
 
-    #         st.warning("No News Found")
+                if article.get("url"):
+                    st.link_button(
+                        "🔗 Read Full Article",
+                        article["url"],
+                    )
 
-    # else:
+                st.divider()
 
-    #     st.error("Company name not found.")
+        else:
+            st.warning("No news found.")
 
-       
+    else:
+        st.error("Company name not found.")

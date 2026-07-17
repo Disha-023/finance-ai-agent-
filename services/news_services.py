@@ -1,30 +1,49 @@
-# import feedparser
-# from urllib.parse import quote
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("NEWS_API_KEY")
 
 
-# def get_company_news(company_name):
+def get_company_news(company_name):
 
-#     company_name = (
-#         company_name.replace("Limited", "")
-#         .replace("Ltd.", "")
-#         .replace("Ltd", "")
-#         .strip()
-#     )
+    company_name = (
+        company_name.replace("Limited", "")
+        .replace("Ltd.", "")
+        .replace("Ltd", "")
+        .strip()
+    )
 
-#     query = quote(company_name)
+    url = "https://newsapi.org/v2/everything"
 
-#     url = f"https://news.google.com/rss/search?q={query}"
+    params = {
+        "q": company_name,
+        "searchIn": "title,description",
+        "language": "en",
+        "sortBy": "publishedAt",
+        "pageSize": 5,
+        "apiKey": API_KEY,
+    }
 
-#     feed = feedparser.parse(url)
+    response = requests.get(url, params=params)
 
-#     articles = []
+    if response.status_code != 200:
+        return []
 
-#     for entry in feed.entries[:5]:
+    data = response.json()
 
-#         articles.append({
-#             "title": entry.title,
-#             "description": entry.summary,
-#             "url": entry.link
-#         })
+    articles = []
 
-#     return articles
+    for article in data.get("articles", []):
+
+        articles.append({
+            "title": article.get("title"),
+            "description": article.get("description"),
+            "url": article.get("url"),
+            "source": article.get("source", {}).get("name"),
+            "publishedAt": article.get("publishedAt"),
+        })
+
+    return articles
