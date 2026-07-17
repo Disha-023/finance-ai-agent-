@@ -7,6 +7,8 @@ def get_stock_info(symbol):
 
     return {
         "Company": info.get("longName"),
+        "Sector": info.get("sector"),
+        "Industry": info.get("industry"),
         "Current Price": info.get("currentPrice"),
         "Open": info.get("open"),
         "High": info.get("dayHigh"),
