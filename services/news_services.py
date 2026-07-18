@@ -1,12 +1,14 @@
+import streamlit as st
 import os
 import requests
 from dotenv import load_dotenv
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 load_dotenv()
 
 API_KEY = os.getenv("NEWS_API_KEY")
 
-
+@st.cache_data(ttl=300)
 def get_company_news(company_name):
 
     company_name = (

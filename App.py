@@ -7,17 +7,19 @@ from services.stock_services import (
     get_stock_history,
 )
 
-# Import News Function
-from services.news_services import (
-    get_company_news
-)
+from services.news_services import get_company_news
+
+
+# --------------------------------------------------
+# Page Configuration
+# --------------------------------------------------
 
 st.set_page_config(
     page_title="Financial Research AI",
     layout="wide",
 )
 
-st.title("📈 Financial Research AI Agent")
+st.title("Financial Research AI Agent")
 
 
 # --------------------------------------------------
@@ -26,10 +28,19 @@ st.title("📈 Financial Research AI Agent")
 
 st.markdown("""Analyze stocks, market trends, company fundamentals and financial news using AI-powered insights""")
 
-symbol = st.text_input(
-    "Enter Stock Symbol",
-    value="RELIANCE.NS"
-)
+col1, col2 = st.columns(2)
+
+with col1:
+    symbol1 = st.text_input(
+        "Stock 1",
+        value="RELIANCE.NS"
+    )
+
+with col2:
+    symbol2 = st.text_input(
+        "Stock 2",
+        value="TCS.NS"
+    )
 
 period = st.selectbox(
     "Select Time Period",
@@ -54,118 +65,89 @@ if st.button("Analyze Stock"):
     # Company Information
     # ==========================================
 
-    data = get_stock_info(symbol)
+    data = get_stock_info(symbol1)
+    data2 = get_stock_info(symbol2)
 
-
-    # ----- COMPANY OVERVIEW -----
-    st.subheader("Company Information")
-
-    company_name = data.get("Company")
-    sector = data.get("Sector")
-    industry = data.get("Industry")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.info(f"{company_name}")
-    
-    with col2:
-        st.info(f"{sector}" if sector else "Sector Not Available")
-
-    with col3:
-        st.info(f"{industry}" if industry else "Industry Not Available")
-
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric("Current Price", data.get("Current Price"))
-
-        st.metric("Open", data.get("Open"))
+    st.subheader("🏢 Company Information")
+    st.write(data)
 
     with col2:
-        st.metric("High", data.get("High"))
+        st.markdown(f"### {symbol2}")
+        st.write(data2)
 
-        st.metric("Low", data.get("Low"))
+    # ==========================================
+    # Comparison Table
+    # ==========================================
 
-    with col3:
-        st.metric("Volume", data.get("Volume"))
+    st.subheader(" Stock Comparison")
 
-        st.metric("Previous Close", data.get("Previous Close"))
+    comparison_data = {
+        "Metric": [
+            "Current Price",
+            "Open",
+            "High",
+            "Low",
+            "Previous Close",
+            "Volume",
+            "Market Cap",
+        ],
+        symbol1: [
+            data["Current Price"],
+            data["Open"],
+            data["High"],
+            data["Low"],
+            data["Previous Close"],
+            data["Volume"],
+            data["Market Cap"],
+        ],
+        symbol2: [
+            data2["Current Price"],
+            data2["Open"],
+            data2["High"],
+            data2["Low"],
+            data2["Previous Close"],
+            data2["Volume"],
+            data2["Market Cap"],
+        ],
+    }
 
-    market_cap = data.get("Market Cap")
+    st.table(comparison_data)
 
-    if market_cap:
-        st.info(
-            f"Market Cap: ₹{market_cap/1000000000000:.2f} Trillion"
+    # ==========================================
+    # Quick Comparison
+    # ==========================================
+
+    st.subheader(" Quick Comparison")
+
+    change1 = data["Current Price"] - data["Previous Close"]
+    change2 = data2["Current Price"] - data2["Previous Close"]
+
+    if change1 > change2:
+
+        st.success(
+            f" Better Performer Today: {symbol1}"
         )
+
+        st.write(f"Today's Gain: ₹{change1:.2f}")
+
+    elif change2 > change1:
+
+        st.success(
+            f" Better Performer Today: {symbol2}"
+        )
+
+        st.write(f"Today's Gain: ₹{change2:.2f}")
+
     else:
-        st.info("Market Cap: Not Available")
 
-
-
-    # ----------- FINANCIAL HEALTH SCORE -----------
-    # Evaluates stock fundamentals using 
-    # 1. P/E Ratio
-    # 2. Market Cap
-    # NOTE : Higher score indicates stronger fundamentals based on valuation and company size
-
-    score = 0
-
-    market_cap = data.get("Market Cap")
-
-    stock = yf.Ticker(symbol)
-    info = stock.info
-
-    pe_ratio = info.get("trailingPE")
-
-    recommendation = "N/A"
-
-    if pe_ratio:
-        if pe_ratio < 20:
-            score += 40
-            recommendation = "BUY"
-        elif pe_ratio < 35:
-            score += 25
-            recommendation = "HOLD"
-        else:
-            score += 10
-            recommendation = "SELL"
-
-    if market_cap:
-        if market_cap > 1000000000000:  # > 1 Trillion
-            score += 30
-        elif market_cap > 500000000000:  # > 500 Billion
-            score += 20
-        else:
-            score += 10
-
-    st.markdown("---")
-    st.subheader("Financial Health Score")
-    
-    st.progress(score)
-    st.success(f"Financial Health Score: {score}/100")
-
-    # ------------ INVESTMENT RECOMMENDATION ENGINE -------------
-
-    st.subheader("Investment Recommendation")
-
-    if recommendation == "BUY":
-        st.success("🟢 BUY")
-    elif recommendation == "HOLD":
-        st.warning("🟡 HOLD")
-    elif recommendation == "SELL":
-        st.error("🔴 SELL")
-
-    
-
-
+        st.info(" Both stocks performed equally today.")
 
     # ==========================================
     # Stock Price Chart
     # ==========================================
 
-    history = get_stock_history(symbol, period)
+    history = get_stock_history(symbol1, period)
+    history2 = get_stock_history(symbol2, period)
 
     if history is None or history.empty:
         st.error("No data found for the selected Symbol")
@@ -173,32 +155,35 @@ if st.button("Analyze Stock"):
 
     fig = go.Figure()
 
-    fig.add_trace(
-        go.Scatter(
-            x=history.index,
-            y=history["Close"],
-            mode="lines",
-            name="Closing Price",
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["Close"],
+                mode="lines",
+                name="Closing Price",
+            )
         )
-    )
 
-    fig.update_layout(
-        title=f"{symbol} Closing Price",
-        xaxis_title="Date",
-        yaxis_title="Price (₹)",
-        template="plotly_white",
-    )
+        fig.update_layout(
+            title=f"{symbol} Closing Price",
+            xaxis_title="Date",
+            yaxis_title="Price (₹)",
+            template="plotly_white",
+        )
 
     st.plotly_chart(
         fig,
         use_container_width=True,
     )
 
+    else:
+        st.error("Unable to fetch stock history.")
+
     # ==========================================
     # Latest News
     # ==========================================
 
-    st.subheader("📰 Latest News")
+    st.subheader("Latest News")
 
     company_name = data.get("Company")
 
@@ -214,8 +199,6 @@ if st.button("Analyze Stock"):
 
         news = get_company_news(company_name)
 
-        
-
         if news:
 
             st.success(f"Found {len(news)} Articles")
@@ -227,17 +210,35 @@ if st.button("Analyze Stock"):
                 if article.get("description"):
                     st.write(article["description"])
 
+                # ---------------- Sentiment Analysis ----------------
+
+                headline = article["title"]
+
+                if article.get("description"):
+                    headline += " " + article["description"]
+
+                sentiment, score = analyze_sentiment(headline)
+
+                if sentiment == "Positive":
+                    st.success(f" Sentiment: {sentiment} ({score:.2f})")
+
+                elif sentiment == "Negative":
+                    st.error(f"Sentiment: {sentiment} ({score:.2f})")
+
+                else:
+                    st.info(f" Sentiment: {sentiment} ({score:.2f})")
+
                 if article.get("source"):
-                    st.caption(f"📰 Source: {article['source']}")
+                    st.caption(f" Source: {article['source']}")
 
                 if article.get("publishedAt"):
                     st.caption(
-                        f"📅 Published: {article['publishedAt'][:10]}"
+                        f" Published: {article['publishedAt'][:10]}"
                     )
 
                 if article.get("url"):
                     st.link_button(
-                        "🔗 Read Full Article",
+                        " Read Full Article",
                         article["url"],
                     )
 
