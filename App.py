@@ -1,6 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import yfinance as yf
+from services.sentiment_services import analyze_sentiment
 
 from services.stock_services import (
     get_stock_info,
@@ -142,42 +143,55 @@ if st.button("Analyze Stock"):
 
         st.info(" Both stocks performed equally today.")
 
-    # ==========================================
-    # Stock Price Chart
-    # ==========================================
+    
+# ==========================================
+# Stock Price Chart
+# ==========================================
 
-    history = get_stock_history(symbol1, period)
-    history2 = get_stock_history(symbol2, period)
+history = get_stock_history(symbol1, period)
+history2 = get_stock_history(symbol2, period)
 
-    if history is None or history.empty:
-        st.error("No data found for the selected Symbol")
-        st.stop()
+if (
+    history is not None
+    and not history.empty
+    and history2 is not None
+    and not history2.empty
+):
 
     fig = go.Figure()
 
-        fig.add_trace(
-            go.Scatter(
-                x=history.index,
-                y=history["Close"],
-                mode="lines",
-                name="Closing Price",
-            )
+    fig.add_trace(
+        go.Scatter(
+            x=history.index,
+            y=history["Close"],
+            mode="lines",
+            name=symbol1,
         )
+    )
 
-        fig.update_layout(
-            title=f"{symbol} Closing Price",
-            xaxis_title="Date",
-            yaxis_title="Price (₹)",
-            template="plotly_white",
+    fig.add_trace(
+        go.Scatter(
+            x=history2.index,
+            y=history2["Close"],
+            mode="lines",
+            name=symbol2,
         )
+    )
+
+    fig.update_layout(
+        title=f"{symbol1} vs {symbol2} Closing Price",
+        xaxis_title="Date",
+        yaxis_title="Price (₹)",
+        template="plotly_white",
+    )
 
     st.plotly_chart(
         fig,
         use_container_width=True,
     )
 
-    else:
-        st.error("Unable to fetch stock history.")
+else:
+    st.error("Unable to fetch stock history.")
 
     # ==========================================
     # Latest News
