@@ -11,9 +11,9 @@ from services.sentiment_services import analyze_sentiment
 from services.ai_services import generate_stock_analysis
 
 
-# --------------------------------------------------
+
 # Page Configuration
-# --------------------------------------------------
+
 
 st.set_page_config(
     page_title="Financial Research AI",
@@ -28,9 +28,8 @@ Analyze stocks, market trends, company fundamentals and financial news using AI-
 """
 )
 
-# --------------------------------------------------
+
 # User Inputs
-# --------------------------------------------------
 
 col1, col2 = st.columns(2)
 
@@ -59,15 +58,13 @@ period = st.selectbox(
 )
 
 
-# --------------------------------------------------
+
 # Analyze Button
-# --------------------------------------------------
+
 
 if st.button("Analyze Stock"):
 
-    # ==========================================
     # Fetch Stock Data
-    # ==========================================
 
     data = get_stock_info(symbol1)
     data2 = get_stock_info(symbol2)
@@ -75,9 +72,8 @@ if st.button("Analyze Stock"):
     history = get_stock_history(symbol1, period)
     history2 = get_stock_history(symbol2, period)
 
-    # ==========================================
+    
     # Company Information
-    # ==========================================
 
     st.subheader(" Company Information")
 
@@ -91,9 +87,8 @@ if st.button("Analyze Stock"):
         st.markdown(f"### {symbol2}")
         st.write(data2)
 
-    # ==========================================
+   
     # Stock Comparison
-    # ==========================================
 
     st.subheader(" Stock Comparison")
 
@@ -129,10 +124,9 @@ if st.button("Analyze Stock"):
 
     st.table(comparison_data)
 
-    # ==========================================
+    
     # Quick Comparison
-    # ==========================================
-
+    
     st.subheader(" Quick Comparison")
 
     change1 = data["Current Price"] - data["Previous Close"]
@@ -157,9 +151,8 @@ if st.button("Analyze Stock"):
     else:
         st.info("Both stocks performed equally today.")
 
-    # ==========================================
+
     # Stock Price Chart
-    # ==========================================
 
     if (
         history is not None
@@ -202,9 +195,8 @@ if st.button("Analyze Stock"):
             use_container_width=True,
         )
 
-        # ==========================================
+        
         # RSI Chart
-        # ==========================================
 
         st.subheader(" Relative Strength Index (RSI)")
 
@@ -255,9 +247,8 @@ if st.button("Analyze Stock"):
     else:
         st.error("Unable to fetch stock history.")
 
-    # ==========================================
+ 
     # Latest News
-    # ==========================================
 
     st.subheader("Latest News")
 
@@ -325,10 +316,10 @@ if st.button("Analyze Stock"):
 
     else:
         st.error("Company name not found.")
-    # ==========================================
-    # AI Financial Analysis
-    # ==========================================
+    
 
+    # AI Financial Analysis
+   
     st.subheader(" AI Financial Analysis")
 
     if (
