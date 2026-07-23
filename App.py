@@ -1,5 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
+import yfinance as yf
+from textblob import TextBlob
 
 from services.stock_services import (
     get_stock_info,
@@ -264,7 +266,18 @@ if st.button("Analyze Stock"):
 
             st.success(f"Found {len(news)} Articles")
 
+            sentiment_score = 0
+
             for article in news:
+
+                # ----- SENTIMENT ANALYSIS -----
+                # Calculates overall market sentiment from recent news headlines using TextBlob polarity score 
+
+                headline = article["title"]
+
+                analysis = TextBlob(headline)
+
+                sentiment_score += analysis.sentiment.polarity
 
                 st.markdown(f"### {article['title']}")
 
@@ -310,6 +323,112 @@ if st.button("Analyze Stock"):
                     )
 
                 st.divider()
+
+            # ----- SENTIMENT SUMMARY -----
+            # Displays overall market sentiment based on news analysis
+
+            avg_sentiment = sentiment_score / len(news)
+
+            st.subheader("AI Market Sentiment Dashboard")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric("Sentimate Score", f"{avg_sentiment:.2f}")
+
+            with col2:
+                sentiment_percentage = int(((avg_sentiment + 1) / 2) * 100)
+                st.metric("Confidence Level", f"{sentiment_percentage}%")
+
+            st.progress(sentiment_percentage)
+
+
+            # ----- AI Reasearch Summary -----
+            st.subheader("📋 AI Research Summary")
+
+            if avg_sentiment > 0.1:
+
+                st.success(""" Recent news coverage is largely positive.
+                            The company is receiving favorable attention from the market which may improve investor confidence and future growth expectations.""")
+
+            elif avg_sentiment < -0.1:
+
+                st.error("""Recent news coverage contains negative signals.
+                            Investors should carefully evaluate recent developments before making decisions.""")
+
+            else:
+
+                st.info("""News sentiment appears neutral.
+                            No major positive or negative trend is currently visible from recent headlines.""")
+
+
+            
+            # ----- Financial Health Score -----
+            score = 0
+            recommendation = "N/A"
+
+            stock = yf.Ticker(symbol1)
+            info = stock.info
+
+            pe_ratio = info.get("trailingPE")
+            market_cap = data.get("Market Cap")
+
+            if pe_ratio:
+                if pe_ratio < 20:
+                    score += 40
+                    recommendation = "BUY"
+                elif pe_ratio < 35:
+                    score += 25
+                    recommendation = "HOLD"
+                else:
+                    score += 10
+                    recommendation = "SELL"
+
+            if market_cap:
+                if market_cap > 1000000000000:  # > 1 Trillion
+                    score += 30
+                elif market_cap > 500000000000:  # > 500 Billion
+                    score += 20
+                else:
+                    score += 10
+
+            st.subheader("Financial Health Score")
+            st.progress(score)
+            st.success(f"Financial Health Score: {score}/100")
+
+            # ----- Investment Confidence Score -----
+            confidence = score + (avg_sentiment * 20)
+
+            confidence = max(0, min(100, confidence))
+
+            st.subheader("Investment Confidence Score")
+
+            st.metric("Confidence", f"{confidence:.0f}/100")
+
+
+
+            # ----- AI Final Verdict -----
+            st.subheader("🤖 AI Final Verdict")
+
+            if recommendation == "BUY" and avg_sentiment > 0:
+
+                st.success("""Strong Fundamentals + Positive News
+                                AI Verdict:
+                                This stock currently shows promising characteristics for further research.""")
+
+            elif recommendation == "SELL" and avg_sentiment < 0:
+
+                st.error("""Weak Fundamentals + Negative News
+                                AI Verdict:
+                                Investors should proceed cautiously.""")
+
+            else:
+
+                st.warning("""Mixed Signals Detected
+                                AI Verdict:
+                                Additional analysis is recommended before making investment decisions.""")
+
+            
 
         else:
             st.warning("No news found.")
