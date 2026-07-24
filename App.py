@@ -407,6 +407,15 @@ if st.button("Analyze Stock"):
 
 
 
+            # ----- AI Recommendation -----
+            recommendation = "HOLD"
+
+            if avg_sentiment > 0.3:
+                recommendation = "BUY"
+            elif avg_sentiment < -0.3:
+                recommendation = "SELL"
+
+
             # ----- AI Final Verdict -----
             st.subheader("🤖 AI Final Verdict")
 

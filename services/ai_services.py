@@ -6,7 +6,8 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-model = genai.GenerativeModel("gemini-pro")
+# Updated Gemini Model
+model = genai.GenerativeModel("gemini-3.5-flash-lite")
 
 
 def generate_stock_analysis(prompt):
