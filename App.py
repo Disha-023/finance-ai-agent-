@@ -12,7 +12,12 @@ from services.news_services import get_company_news
 from services.sentiment_services import analyze_sentiment
 from services.ai_services import generate_stock_analysis
 
-
+# watchlist database functions
+from services.watchlist_service import (
+    init_db,
+    add_stock,
+    get_watchlist
+)
 
 # Page Configuration
 
@@ -21,6 +26,9 @@ st.set_page_config(
     page_title="Financial Research AI",
     layout="wide",
 )
+
+# Create watchlist database if not exists init_db()
+init_db()
 
 st.title("Financial Research AI Agent")
 
@@ -66,7 +74,15 @@ with st.sidebar:
 
     symbol1 = st.text_input("Stock 1",value="RELIANCE.NS")
 
+    if st.button(f"Add {symbol1} to Watchlist", use_container_width=True):
+        add_stock(symbol1)
+        st.success(f"{symbol1} added to WatchList")
+
     symbol2 = st.text_input("Stock 2",value="TCS.NS")
+
+    if st.button(f"Add {symbol2} to WatchList", use_container_width=True):
+        add_stock(symbol2)
+        st.success(f"{symbol2} added to WatchList")
 
     period = st.selectbox(
         "Time Period",
@@ -81,6 +97,19 @@ with st.sidebar:
     )
 
     analyze_button = st.button(" Analyze Stocks ",use_container_width=True)
+
+
+    st.markdown("---")
+    st.subheader("My Watchlist")
+
+    watchlist = get_watchlist()
+
+    if watchlist:
+        for stock in watchlist:
+            st.write(stock[0])
+    
+    else:
+        st.info("No Stock in Watchlist yet!")
 
 
 
@@ -222,12 +251,58 @@ if analyze_button:
             )
         )
 
+        # 20 Day Moving Average
+
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["MA20"],
+                mode="lines",
+                name=f"{symbol1} MA20",
+                line=dict(dash="dot"),
+            )
+        )
+
+        # 50 Day Moving Average
+
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["MA50"],
+                mode="lines",
+                name=f"{symbol1} MA50",
+                line=dict(dash="dash"),
+            )
+        )
+
         fig.add_trace(
             go.Scatter(
                 x=history2.index,
                 y=history2["Close"],
                 mode="lines",
                 name=symbol2,
+            )
+        )
+
+        # 20 Day Moving Average
+        fig.add_trace(
+            go.Scatter(
+                x=history2.index,
+                y=history2["MA20"],
+                mode="lines",
+                name=f"{symbol2} MA20",
+                line=dict(dash="dot"),
+            )
+        )
+
+        # 50 Day Moving Average
+        fig.add_trace(
+            go.Scatter(
+                x=history2.index,
+                y=history2["MA50"],
+                mode="lines",
+                name=f"{symbol2} MA50",
+                line=dict(dash="dash"),
             )
         )
 
@@ -447,7 +522,7 @@ if analyze_button:
 
             confidence = max(0, min(100, confidence))
 
-            
+
 
             st.subheader("Investment Confidence Score")
 
