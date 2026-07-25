@@ -33,38 +33,61 @@ Analyze stocks, market trends, company fundamentals and financial news using AI-
 
 # User Inputs
 
-col1, col2 = st.columns(2)
+# col1, col2 = st.columns(2)
 
-with col1:
-    symbol1 = st.text_input(
-        "Stock 1",
-        value="RELIANCE.NS"
+# with col1:
+#     symbol1 = st.text_input(
+#         "Stock 1",
+#         value="RELIANCE.NS"
+#     )
+
+# with col2:
+#     symbol2 = st.text_input(
+#         "Stock 2",
+#         value="TCS.NS"
+#     )
+
+# period = st.selectbox(
+#     "Select Time Period",
+#     [
+#         "1mo",
+#         "3mo",
+#         "6mo",
+#         "1y",
+#         "2y",
+#         "5y",
+#     ],
+# )
+
+# Sidebar Controls improvement
+with st.sidebar:
+
+    st.title(" Stock Controls ")
+
+    symbol1 = st.text_input("Stock 1",value="RELIANCE.NS")
+
+    symbol2 = st.text_input("Stock 2",value="TCS.NS")
+
+    period = st.selectbox(
+        "Time Period",
+        [
+            "1mo",
+            "3mo",
+            "6mo",
+            "1y",
+            "2y",
+            "5y",
+        ],
     )
 
-with col2:
-    symbol2 = st.text_input(
-        "Stock 2",
-        value="TCS.NS"
-    )
-
-period = st.selectbox(
-    "Select Time Period",
-    [
-        "1mo",
-        "3mo",
-        "6mo",
-        "1y",
-        "2y",
-        "5y",
-    ],
-)
+    analyze_button = st.button(" Analyze Stocks ",use_container_width=True)
 
 
 
 # Analyze Button
 
 
-if st.button("Analyze Stock"):
+if analyze_button:
 
     # Fetch Stock Data
 
@@ -82,12 +105,35 @@ if st.button("Analyze Stock"):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown(f"### {symbol1}")
-        st.write(data)
+        st.info(f"{symbol1}")
+
+        st.markdown(f"""
+    **Company:** {data['Company']}  
+    **Sector:** {data['Sector']}  
+    **Industry:** {data['Industry']}
+    """)
 
     with col2:
-        st.markdown(f"### {symbol2}")
-        st.write(data2)
+        st.info(f"{symbol2}")
+
+        st.markdown(f"""
+    **Company:** {data2['Company']}  
+    **Sector:** {data2['Sector']}  
+    **Industry:** {data2['Industry']}
+    """)
+
+
+ 
+
+    # col1, col2 = st.columns(2)
+
+    # with col1:
+    #     st.markdown(f"### {symbol1}")
+    #     st.write(data)
+
+    # with col2:
+    #     st.markdown(f"### {symbol2}")
+    #     st.write(data2)
 
    
     # Stock Comparison
@@ -401,9 +447,48 @@ if st.button("Analyze Stock"):
 
             confidence = max(0, min(100, confidence))
 
+            
+
             st.subheader("Investment Confidence Score")
 
             st.metric("Confidence", f"{confidence:.0f}/100")
+
+            # ---------- AI Investment Scorecard ----------
+
+
+            st.subheader(" AI Investment Scorecard ")
+
+            rsi = history["RSI"].iloc[-1]
+
+            technical_score = 50
+
+            if rsi < 30:
+                technical_score = 80
+
+            elif rsi < 70:
+                technical_score = 60
+
+            else:
+                technical_score = 40
+
+
+            overall_score = (score + technical_score + confidence) / 3
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Financial Health", f"{score}/100")
+
+            with col2:
+                st.metric("Technical Strength", f"{technical_score}/100")
+
+            with col3:
+                st.metric("Confidence", f"{confidence:.0f}/100")
+    
+
+            st.progress(int(overall_score))
+
+            st.success(f"Overall Investment Score: {overall_score:.1f}/100")
 
 
 
