@@ -2,6 +2,8 @@ import streamlit as st
 import plotly.graph_objects as go
 import yfinance as yf
 from textblob import TextBlob
+from datetime import datetime       # For Current Time
+import pytz                         # For Indian Timezone                
 
 from services.stock_services import (
     get_stock_info,
@@ -37,6 +39,35 @@ st.markdown(
 Analyze stocks, market trends, company fundamentals and financial news using AI-powered insights.
 """
 )
+
+# ---------- Indian Market Status ----------
+
+india = pytz.timezone("Asia/Kolkata")
+current_time = datetime.now(india)
+
+market_open = current_time.replace(
+    hour=9,
+    minute=15,
+    second=0
+)
+
+market_close = current_time.replace(
+    hour=15,
+    minute=30,
+    second=0
+)
+
+if market_open <= current_time <= market_close:
+
+    st.success(
+        f" NSE Market Open | {current_time.strftime('%I:%M %p IST')}"
+    )
+
+else:
+
+    st.error(
+        f" NSE Market Closed | {current_time.strftime('%I:%M %p IST')}"
+    )
 
 
 # User Inputs
@@ -133,26 +164,66 @@ if analyze_button:
 
     col1, col2 = st.columns(2)
 
+    # ---------- Fundamental Analysis Comparison ----------
+
     with col1:
         st.info(f"{symbol1}")
 
         st.markdown(f"""
-    **Company:** {data['Company']}  
-    **Sector:** {data['Sector']}  
-    **Industry:** {data['Industry']}
-    """)
+            **Company:** {data['Company']}  
+            **Sector:** {data['Sector']}  
+            **Industry:** {data['Industry']}
+        """)
+
+        fundamentals = {
+            "Metric": [
+                "P/E Ratio",
+                "EPS",
+                "Dividend Yield",
+                "52W High",
+                "52W Low"
+            ],
+            "Value": [
+                data.get("PE Ratio"),
+                data.get("EPS"),
+                data.get("Dividend Yield"),
+                data.get("52W High"),
+                data.get("52W Low")
+            ]
+        }
+
+        st.table(fundamentals)
+
+
 
     with col2:
         st.info(f"{symbol2}")
 
         st.markdown(f"""
-    **Company:** {data2['Company']}  
-    **Sector:** {data2['Sector']}  
-    **Industry:** {data2['Industry']}
-    """)
+            **Company:** {data2['Company']}  
+            **Sector:** {data2['Sector']}  
+            **Industry:** {data2['Industry']}
+        """)
 
+        fundamentals = {
+            "Metric": [
+                "P/E Ratio",
+                "EPS",
+                "Dividend Yield",
+                "52W High",
+                "52W Low"
+            ],
+            "Value": [
+                data.get("PE Ratio"),
+                data.get("EPS"),
+                data.get("Dividend Yield"),
+                data.get("52W High"),
+                data.get("52W Low")
+            ]
+        }
 
- 
+        st.table(fundamentals)
+    
 
     # col1, col2 = st.columns(2)
 
@@ -163,6 +234,63 @@ if analyze_button:
     # with col2:
     #     st.markdown(f"### {symbol2}")
     #     st.write(data2)
+
+
+
+    # ---------- Sector Comparison ----------
+
+    st.subheader(" Sector Comparison")
+
+    sector_data = {
+        "Company": [
+            data["Company"],
+            data2["Company"]
+        ],
+        "Sector": [
+            data["Sector"],
+            data2["Sector"]
+        ],
+        "Industry": [
+            data["Industry"],
+            data2["Industry"]
+        ]
+    }
+
+    st.table(sector_data)
+
+    # Sector Comparison result
+
+    if data["Sector"] == data2["Sector"]:
+        st.success(f"Both companies belong to the {data['Sector']} sector.")
+
+    else:
+        st.warning(f"{data['Company']} and {data2['Company']} belong to different sectors.")
+
+
+
+    # ---------- Fundamental Health Comparison ----------
+
+    st.subheader("Fundamental Health")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric("Debt To Equity",data.get("Debt To Equity") or "N/A")
+
+        st.metric("ROE",data.get("ROE") or "N/A")
+
+        st.metric("Revenue Growth",data.get("Revenue Growth") or "N/A")
+
+    with col2:
+
+        st.metric("Debt To Equity",data2.get("Debt To Equity") or "N/A")
+
+        st.metric("ROE",data2.get("ROE") or "N/A")
+
+        st.metric("Revenue Growth",data2.get("Revenue Growth") or "N/A")
+
+
 
    
     # Stock Comparison
