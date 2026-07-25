@@ -1,5 +1,9 @@
 import streamlit as st
 import plotly.graph_objects as go
+import yfinance as yf
+from textblob import TextBlob
+from datetime import datetime       # For Current Time
+import pytz                         # For Indian Timezone                
 
 from services.stock_services import (
     get_stock_info,
@@ -10,7 +14,12 @@ from services.news_services import get_company_news
 from services.sentiment_services import analyze_sentiment
 from services.ai_services import generate_stock_analysis
 
-
+# watchlist database functions
+from services.watchlist_service import (
+    init_db,
+    add_stock,
+    get_watchlist
+)
 
 # Page Configuration
 
@@ -20,6 +29,9 @@ st.set_page_config(
     layout="wide",
 )
 
+# Create watchlist database if not exists init_db()
+init_db()
+
 st.title("Financial Research AI Agent")
 
 st.markdown(
@@ -28,41 +40,114 @@ Analyze stocks, market trends, company fundamentals and financial news using AI-
 """
 )
 
+# ---------- Indian Market Status ----------
+
+india = pytz.timezone("Asia/Kolkata")
+current_time = datetime.now(india)
+
+market_open = current_time.replace(
+    hour=9,
+    minute=15,
+    second=0
+)
+
+market_close = current_time.replace(
+    hour=15,
+    minute=30,
+    second=0
+)
+
+if market_open <= current_time <= market_close:
+
+    st.success(
+        f" NSE Market Open | {current_time.strftime('%I:%M %p IST')}"
+    )
+
+else:
+
+    st.error(
+        f" NSE Market Closed | {current_time.strftime('%I:%M %p IST')}"
+    )
+
 
 # User Inputs
 
-col1, col2 = st.columns(2)
+# col1, col2 = st.columns(2)
 
-with col1:
-    symbol1 = st.text_input(
-        "Stock 1",
-        value="RELIANCE.NS"
+# with col1:
+#     symbol1 = st.text_input(
+#         "Stock 1",
+#         value="RELIANCE.NS"
+#     )
+
+# with col2:
+#     symbol2 = st.text_input(
+#         "Stock 2",
+#         value="TCS.NS"
+#     )
+
+# period = st.selectbox(
+#     "Select Time Period",
+#     [
+#         "1mo",
+#         "3mo",
+#         "6mo",
+#         "1y",
+#         "2y",
+#         "5y",
+#     ],
+# )
+
+# Sidebar Controls improvement
+with st.sidebar:
+
+    st.title(" Stock Controls ")
+
+    symbol1 = st.text_input("Stock 1",value="RELIANCE.NS")
+
+    if st.button(f"Add {symbol1} to Watchlist", use_container_width=True):
+        add_stock(symbol1)
+        st.success(f"{symbol1} added to WatchList")
+
+    symbol2 = st.text_input("Stock 2",value="TCS.NS")
+
+    if st.button(f"Add {symbol2} to WatchList", use_container_width=True):
+        add_stock(symbol2)
+        st.success(f"{symbol2} added to WatchList")
+
+    period = st.selectbox(
+        "Time Period",
+        [
+            "1mo",
+            "3mo",
+            "6mo",
+            "1y",
+            "2y",
+            "5y",
+        ],
     )
 
-with col2:
-    symbol2 = st.text_input(
-        "Stock 2",
-        value="TCS.NS"
-    )
+    analyze_button = st.button(" Analyze Stocks ",use_container_width=True)
 
-period = st.selectbox(
-    "Select Time Period",
-    [
-        "1mo",
-        "3mo",
-        "6mo",
-        "1y",
-        "2y",
-        "5y",
-    ],
-)
+
+    st.markdown("---")
+    st.subheader("My Watchlist")
+
+    watchlist = get_watchlist()
+
+    if watchlist:
+        for stock in watchlist:
+            st.write(stock[0])
+    
+    else:
+        st.info("No Stock in Watchlist yet!")
 
 
 
 # Analyze Button
 
 
-if st.button("Analyze Stock"):
+if analyze_button:
 
     # Fetch Stock Data
 
@@ -79,13 +164,133 @@ if st.button("Analyze Stock"):
 
     col1, col2 = st.columns(2)
 
+    # ---------- Fundamental Analysis Comparison ----------
+
     with col1:
-        st.markdown(f"### {symbol1}")
-        st.write(data)
+        st.info(f"{symbol1}")
+
+        st.markdown(f"""
+            **Company:** {data['Company']}  
+            **Sector:** {data['Sector']}  
+            **Industry:** {data['Industry']}
+        """)
+
+        fundamentals = {
+            "Metric": [
+                "P/E Ratio",
+                "EPS",
+                "Dividend Yield",
+                "52W High",
+                "52W Low"
+            ],
+            "Value": [
+                data.get("PE Ratio"),
+                data.get("EPS"),
+                data.get("Dividend Yield"),
+                data.get("52W High"),
+                data.get("52W Low")
+            ]
+        }
+
+        st.table(fundamentals)
+
+
 
     with col2:
-        st.markdown(f"### {symbol2}")
-        st.write(data2)
+        st.info(f"{symbol2}")
+
+        st.markdown(f"""
+            **Company:** {data2['Company']}  
+            **Sector:** {data2['Sector']}  
+            **Industry:** {data2['Industry']}
+        """)
+
+        fundamentals = {
+            "Metric": [
+                "P/E Ratio",
+                "EPS",
+                "Dividend Yield",
+                "52W High",
+                "52W Low"
+            ],
+            "Value": [
+                data.get("PE Ratio"),
+                data.get("EPS"),
+                data.get("Dividend Yield"),
+                data.get("52W High"),
+                data.get("52W Low")
+            ]
+        }
+
+        st.table(fundamentals)
+    
+
+    # col1, col2 = st.columns(2)
+
+    # with col1:
+    #     st.markdown(f"### {symbol1}")
+    #     st.write(data)
+
+    # with col2:
+    #     st.markdown(f"### {symbol2}")
+    #     st.write(data2)
+
+
+
+    # ---------- Sector Comparison ----------
+
+    st.subheader(" Sector Comparison")
+
+    sector_data = {
+        "Company": [
+            data["Company"],
+            data2["Company"]
+        ],
+        "Sector": [
+            data["Sector"],
+            data2["Sector"]
+        ],
+        "Industry": [
+            data["Industry"],
+            data2["Industry"]
+        ]
+    }
+
+    st.table(sector_data)
+
+    # Sector Comparison result
+
+    if data["Sector"] == data2["Sector"]:
+        st.success(f"Both companies belong to the {data['Sector']} sector.")
+
+    else:
+        st.warning(f"{data['Company']} and {data2['Company']} belong to different sectors.")
+
+
+
+    # ---------- Fundamental Health Comparison ----------
+
+    st.subheader("Fundamental Health")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric("Debt To Equity",data.get("Debt To Equity") or "N/A")
+
+        st.metric("ROE",data.get("ROE") or "N/A")
+
+        st.metric("Revenue Growth",data.get("Revenue Growth") or "N/A")
+
+    with col2:
+
+        st.metric("Debt To Equity",data2.get("Debt To Equity") or "N/A")
+
+        st.metric("ROE",data2.get("ROE") or "N/A")
+
+        st.metric("Revenue Growth",data2.get("Revenue Growth") or "N/A")
+
+
 
    
     # Stock Comparison
@@ -174,12 +379,58 @@ if st.button("Analyze Stock"):
             )
         )
 
+        # 20 Day Moving Average
+
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["MA20"],
+                mode="lines",
+                name=f"{symbol1} MA20",
+                line=dict(dash="dot"),
+            )
+        )
+
+        # 50 Day Moving Average
+
+        fig.add_trace(
+            go.Scatter(
+                x=history.index,
+                y=history["MA50"],
+                mode="lines",
+                name=f"{symbol1} MA50",
+                line=dict(dash="dash"),
+            )
+        )
+
         fig.add_trace(
             go.Scatter(
                 x=history2.index,
                 y=history2["Close"],
                 mode="lines",
                 name=symbol2,
+            )
+        )
+
+        # 20 Day Moving Average
+        fig.add_trace(
+            go.Scatter(
+                x=history2.index,
+                y=history2["MA20"],
+                mode="lines",
+                name=f"{symbol2} MA20",
+                line=dict(dash="dot"),
+            )
+        )
+
+        # 50 Day Moving Average
+        fig.add_trace(
+            go.Scatter(
+                x=history2.index,
+                y=history2["MA50"],
+                mode="lines",
+                name=f"{symbol2} MA50",
+                line=dict(dash="dash"),
             )
         )
 
@@ -264,7 +515,18 @@ if st.button("Analyze Stock"):
 
             st.success(f"Found {len(news)} Articles")
 
+            sentiment_score = 0
+
             for article in news:
+
+                # ----- SENTIMENT ANALYSIS -----
+                # Calculates overall market sentiment from recent news headlines using TextBlob polarity score 
+
+                headline = article["title"]
+
+                analysis = TextBlob(headline)
+
+                sentiment_score += analysis.sentiment.polarity
 
                 st.markdown(f"### {article['title']}")
 
@@ -310,6 +572,160 @@ if st.button("Analyze Stock"):
                     )
 
                 st.divider()
+
+            # ----- SENTIMENT SUMMARY -----
+            # Displays overall market sentiment based on news analysis
+
+            avg_sentiment = sentiment_score / len(news)
+
+            st.subheader("AI Market Sentiment Dashboard")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric("Sentimate Score", f"{avg_sentiment:.2f}")
+
+            with col2:
+                sentiment_percentage = int(((avg_sentiment + 1) / 2) * 100)
+                st.metric("Confidence Level", f"{sentiment_percentage}%")
+
+            st.progress(sentiment_percentage)
+
+
+            # ----- AI Reasearch Summary -----
+            st.subheader("📋 AI Research Summary")
+
+            if avg_sentiment > 0.1:
+
+                st.success(""" Recent news coverage is largely positive.
+                            The company is receiving favorable attention from the market which may improve investor confidence and future growth expectations.""")
+
+            elif avg_sentiment < -0.1:
+
+                st.error("""Recent news coverage contains negative signals.
+                            Investors should carefully evaluate recent developments before making decisions.""")
+
+            else:
+
+                st.info("""News sentiment appears neutral.
+                            No major positive or negative trend is currently visible from recent headlines.""")
+
+
+            
+            # ----- Financial Health Score -----
+            score = 0
+            recommendation = "N/A"
+
+            stock = yf.Ticker(symbol1)
+            info = stock.info
+
+            pe_ratio = info.get("trailingPE")
+            market_cap = data.get("Market Cap")
+
+            if pe_ratio:
+                if pe_ratio < 20:
+                    score += 40
+                    recommendation = "BUY"
+                elif pe_ratio < 35:
+                    score += 25
+                    recommendation = "HOLD"
+                else:
+                    score += 10
+                    recommendation = "SELL"
+
+            if market_cap:
+                if market_cap > 1000000000000:  # > 1 Trillion
+                    score += 30
+                elif market_cap > 500000000000:  # > 500 Billion
+                    score += 20
+                else:
+                    score += 10
+
+            st.subheader("Financial Health Score")
+            st.progress(score)
+            st.success(f"Financial Health Score: {score}/100")
+
+            # ----- Investment Confidence Score -----
+            confidence = score + (avg_sentiment * 20)
+
+            confidence = max(0, min(100, confidence))
+
+
+
+            st.subheader("Investment Confidence Score")
+
+            st.metric("Confidence", f"{confidence:.0f}/100")
+
+            # ---------- AI Investment Scorecard ----------
+
+
+            st.subheader(" AI Investment Scorecard ")
+
+            rsi = history["RSI"].iloc[-1]
+
+            technical_score = 50
+
+            if rsi < 30:
+                technical_score = 80
+
+            elif rsi < 70:
+                technical_score = 60
+
+            else:
+                technical_score = 40
+
+
+            overall_score = (score + technical_score + confidence) / 3
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Financial Health", f"{score}/100")
+
+            with col2:
+                st.metric("Technical Strength", f"{technical_score}/100")
+
+            with col3:
+                st.metric("Confidence", f"{confidence:.0f}/100")
+    
+
+            st.progress(int(overall_score))
+
+            st.success(f"Overall Investment Score: {overall_score:.1f}/100")
+
+
+
+            # ----- AI Recommendation -----
+            recommendation = "HOLD"
+
+            if avg_sentiment > 0.3:
+                recommendation = "BUY"
+            elif avg_sentiment < -0.3:
+                recommendation = "SELL"
+
+
+            # ----- AI Final Verdict -----
+            st.subheader("🤖 AI Final Verdict")
+
+            if recommendation == "BUY" and avg_sentiment > 0:
+
+                st.success("""Strong Fundamentals + Positive News
+                                AI Verdict:
+                                This stock currently shows promising characteristics for further research.""")
+
+            elif recommendation == "SELL" and avg_sentiment < 0:
+
+                st.error("""Weak Fundamentals + Negative News
+                                AI Verdict:
+                                Investors should proceed cautiously.""")
+
+            else:
+
+                st.warning("""Mixed Signals Detected
+                                AI Verdict:
+                                Additional analysis is recommended before making investment decisions.""")
+
+            
 
         else:
             st.warning("No news found.")
