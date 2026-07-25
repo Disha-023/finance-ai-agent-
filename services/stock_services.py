@@ -16,7 +16,15 @@ def get_stock_info(symbol):
         "Low": info.get("dayLow"),
         "Previous Close": info.get("previousClose"),
         "Volume": info.get("volume"),
-        "Market Cap": info.get("marketCap")
+        "Market Cap": info.get("marketCap"),
+        "PE Ratio": info.get("trailingPE"),
+        "EPS": info.get("trailingEps"),
+        "Dividend Yield": info.get("dividendYield"),    
+        "52W High": info.get("fiftyTwoWeekHigh"),
+        "52W Low": info.get("fiftyTwoWeekLow"),
+        "Debt To Equity": info.get("debtToEquity"),
+        "ROE": info.get("returnOnEquity"),
+        "Revenue Growth": info.get("revenueGrowth"),
     }
 
 
