@@ -3,7 +3,8 @@ import plotly.graph_objects as go
 import yfinance as yf
 from textblob import TextBlob
 from datetime import datetime       # For Current Time
-import pytz                         # For Indian Timezone                
+import pytz                         # For Indian Timezone      
+import plotly.express as px         # For Plotly Express charts
 
 from services.stock_services import (
     get_stock_info,
@@ -21,8 +22,68 @@ from services.watchlist_service import (
     get_watchlist
 )
 
-# Page Configuration
+# Portfolio database functions
+from services.portfolio_service import (
+    init_portfolio_db,
+    add_to_portfolio,
+    get_portfolio
+)
 
+# Custom CSS for metric cards
+st.markdown("""
+<style>
+.metric-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.metric-title {
+    font-size: 14px;
+    color: #666666;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #111111;
+}
+
+.confidence-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.confidence-title {
+    font-size: 14px;
+    color: #666666;
+}
+
+.confidence-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #111111;
+}
+
+.stProgress > div > div > div {
+    background-color: #667eea;
+}
+
+.stProgress > div > div > div > div {
+    background-color: #e2e8f0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# Page Configuration
 
 st.set_page_config(
     page_title="Financial Research AI",
@@ -32,13 +93,33 @@ st.set_page_config(
 # Create watchlist database if not exists init_db()
 init_db()
 
-st.title("Financial Research AI Agent")
+# Create portfolio database if not exists init_portfolio_db()
+init_portfolio_db()
 
-st.markdown(
-    """
-Analyze stocks, market trends, company fundamentals and financial news using AI-powered insights.
-"""
-)
+# st.title("Financial Research AI Agent")
+
+# st.markdown(
+#     """
+# Analyze stocks, market trends, company fundamentals and financial news using AI-powered insights.
+# """
+# )
+
+st.markdown("""
+<div style="
+background: linear-gradient(90deg,#0f172a,#1e293b);
+padding:25px;
+border-radius:15px;
+margin-bottom:20px;
+">
+
+<h1 style="color:white;margin:0;">Financial Research AI Agent</h1>
+
+<p style="color:#cbd5e1;font-size:18px;">
+AI-Powered Stock Analysis • Portfolio Intelligence • Market Sentiment
+</p>
+
+</div>
+""", unsafe_allow_html=True)
 
 # ---------- Indian Market Status ----------
 
@@ -57,17 +138,43 @@ market_close = current_time.replace(
     second=0
 )
 
+# if market_open <= current_time <= market_close:
+
+#     st.success(
+#         f" NSE Market Open | {current_time.strftime('%I:%M %p IST')}"
+#     )
+
+# else:
+
+#     st.error(
+#         f" NSE Market Closed | {current_time.strftime('%I:%M %p IST')}"
+#     )
+
 if market_open <= current_time <= market_close:
 
-    st.success(
-        f" NSE Market Open | {current_time.strftime('%I:%M %p IST')}"
-    )
+    st.markdown(f"""
+    <div style="
+    background:#dcfce7;
+    padding:15px;
+    border-radius:12px;
+    border-left:6px solid green;
+    ">
+     NSE Market Open | {current_time.strftime('%I:%M %p IST')}
+    </div>
+    """, unsafe_allow_html=True)
 
 else:
 
-    st.error(
-        f" NSE Market Closed | {current_time.strftime('%I:%M %p IST')}"
-    )
+    st.markdown(f"""
+    <div style="
+    background:#fee2e2;
+    padding:15px;
+    border-radius:12px;
+    border-left:6px solid red;
+    ">
+     NSE Market Closed | {current_time.strftime('%I:%M %p IST')}
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # User Inputs
@@ -98,7 +205,7 @@ else:
 #     ],
 # )
 
-# Sidebar Controls improvement
+# ---------- Sidebar Controls improvement ----------
 with st.sidebar:
 
     st.title(" Stock Controls ")
@@ -143,9 +250,187 @@ with st.sidebar:
         st.info("No Stock in Watchlist yet!")
 
 
+    # ---------- Adding Portfolio Controls ---------- 
+    st.markdown("---")
+    st.subheader("Portfolio Tracker")
 
-# Analyze Button
+    portfolio_symbol = st.text_input("Portfolio Stock",value="RELIANCE.NS")
 
+    portfolio_qty = st.number_input("Quantity",min_value=1,value=1)
+
+    portfolio_buy_price = st.number_input("Buy Price (₹)",min_value=1.0,value=1000.0)
+
+    if st.button("Add To Portfolio",use_container_width=True):
+        add_to_portfolio(
+            portfolio_symbol,
+            portfolio_qty,
+            portfolio_buy_price
+        )
+
+    st.success(f"{portfolio_symbol} added to Portfolio")
+
+    
+    # ---------- Portfolio DashBoard ----------
+
+    st.subheader("## Portfolio Dashboard")
+
+    portfolio_data = get_portfolio()
+
+    if portfolio_data:
+
+        portfolio_table = []
+
+        total_investment = 0
+        total_current_value = 0
+
+        for stock in portfolio_data:
+
+            symbol = stock[0]
+            quantity = stock[1]
+            buy_price = stock[2]
+
+            current_data = get_stock_info(symbol)
+
+            current_price = current_data["Current Price"]
+
+            investment = quantity * buy_price
+            current_value = quantity * current_price
+
+            profit_loss = current_value - investment
+
+            total_investment += investment
+            total_current_value += current_value
+
+            portfolio_table.append({
+                "Stock": symbol,
+                "Quantity": quantity,
+                "Buy Price": f"₹{buy_price:.2f}",
+                "Current Price": f"₹{current_price:.2f}",
+                "Investment": f"₹{investment:.2f}",
+                "Current Value": f"₹{current_value:.2f}",
+                "Profit/Loss": f"₹{profit_loss:.2f}"
+            })
+
+        st.dataframe(portfolio_table,use_container_width=True)
+
+        total_profit = (total_current_value - total_investment)
+
+        portfolio_return = (total_profit / total_investment) * 100
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        with col1:
+            st.markdown(f"""
+    <div style="background:#E3F2FD;padding:15px;border-radius:12px;text-align:center;">
+        <h5>Total Investment</h5>
+        <h2>₹{total_investment:,.0f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+    <div style="background:#E8F5E9;padding:15px;border-radius:12px;text-align:center;">
+        <h5>Current Value</h5>
+        <h2>₹{total_current_value:,.0f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+        with col3:
+            st.markdown(f"""
+    <div style="background:#FFF3E0;padding:15px;border-radius:12px;text-align:center;">
+        <h5>Total Profit</h5>
+        <h2>₹{total_profit:,.0f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+        with col4:
+            st.markdown(f"""
+    <div style="background:#F3E5F5;padding:15px;border-radius:12px;text-align:center;">
+        <h5>Return %</h5>
+        <h2>{portfolio_return:.2f}%</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+        with col5:
+            st.markdown(f"""
+    <div style="background:#FFEBEE;padding:15px;border-radius:12px;text-align:center;">
+        <h5>Stocks</h5>
+        <h2>{len(portfolio_data)}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+        # Finding Top Gainer / Loser
+
+        best_stock = max(portfolio_table,
+            key=lambda x: float(
+                x["Profit/Loss"]
+                .replace("₹", "")
+                .replace(",", "")
+            )
+        )
+
+        worst_stock = min(portfolio_table,
+            key=lambda x: float(
+                x["Profit/Loss"]
+                .replace("₹", "")
+                .replace(",", "")
+            )
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.success(f"Top Gainer: {best_stock['Stock']}")
+            st.write(f"Profit: {best_stock['Profit/Loss']}")
+
+        with col2:
+            st.error(f"Top Loser: {worst_stock['Stock']}")
+            st.write(f"Profit: {worst_stock['Profit/Loss']}")
+
+        
+        st.subheader("## SIP Goal Planner")
+
+        goal_amount = st.number_input("Target Amount (₹)",min_value=10000,value=1000000)
+
+        years = st.number_input("Investment Duration (Years)",min_value=1,value=10)
+
+        expected_return = st.slider("Expected Annual Return (%)",1,30,12)
+
+        monthly_rate = expected_return / 100 / 12
+        months = years * 12
+
+        sip = (goal_amount * monthly_rate / (((1 + monthly_rate) ** months) - 1))
+        sip = sip / (1 + monthly_rate)
+
+        st.success(f"Required Monthly SIP: ₹{sip:,.0f}")
+
+        st.subheader("## Portfolio Allocation")
+
+        allocation_data = []
+
+        for stock in portfolio_data:
+
+            symbol = stock[0]
+            quantity = stock[1]
+            buy_price = stock[2]
+
+            value = quantity * buy_price
+
+            allocation_data.append({"Stock": symbol,"Value": value})
+
+        if allocation_data:
+            fig = px.pie(allocation_data,names="Stock",values="Value",title="Portfolio Allocation")
+
+            st.plotly_chart(fig,use_container_width=True)
+
+
+
+    else:
+        st.info("No stocks in portfolio yet.")
+
+
+
+# ---------- Analyze Button ----------
 
 if analyze_button:
 
@@ -167,62 +452,58 @@ if analyze_button:
     # ---------- Fundamental Analysis Comparison ----------
 
     with col1:
-        st.info(f"{symbol1}")
+        # st.info(f"{symbol1}")
+
+        # st.markdown(f"""
+        #     **Company:** {data['Company']}  
+        #     **Sector:** {data['Sector']}  
+        #     **Industry:** {data['Industry']}
+        # """)
 
         st.markdown(f"""
-            **Company:** {data['Company']}  
-            **Sector:** {data['Sector']}  
-            **Industry:** {data['Industry']}
-        """)
+        <div style="
+            background:#f8fafc;
+            padding:20px;
+            border-radius:15px;
+            border:1px solid #e2e8f0;
+        ">
 
-        fundamentals = {
-            "Metric": [
-                "P/E Ratio",
-                "EPS",
-                "Dividend Yield",
-                "52W High",
-                "52W Low"
-            ],
-            "Value": [
-                data.get("PE Ratio"),
-                data.get("EPS"),
-                data.get("Dividend Yield"),
-                data.get("52W High"),
-                data.get("52W Low")
-            ]
-        }
+        <h3>{symbol1}</h3>
 
-        st.table(fundamentals)
+        <b>Company:</b> {data['Company']}<br>
+        <b>Sector:</b> {data['Sector']}<br>
+        <b>Industry:</b> {data['Industry']}
+
+        </div>
+        """, unsafe_allow_html=True)
 
 
 
     with col2:
-        st.info(f"{symbol2}")
+        # st.info(f"{symbol2}")
+
+        # st.markdown(f"""
+        #     **Company:** {data2['Company']}  
+        #     **Sector:** {data2['Sector']}  
+        #     **Industry:** {data2['Industry']}
+        # """)
 
         st.markdown(f"""
-            **Company:** {data2['Company']}  
-            **Sector:** {data2['Sector']}  
-            **Industry:** {data2['Industry']}
-        """)
+        <div style="
+            background:#f8fafc;
+            padding:20px;
+            border-radius:15px;
+            border:1px solid #e2e8f0;
+        ">
 
-        fundamentals = {
-            "Metric": [
-                "P/E Ratio",
-                "EPS",
-                "Dividend Yield",
-                "52W High",
-                "52W Low"
-            ],
-            "Value": [
-                data.get("PE Ratio"),
-                data.get("EPS"),
-                data.get("Dividend Yield"),
-                data.get("52W High"),
-                data.get("52W Low")
-            ]
-        }
+        <h3>{symbol2}</h3>
 
-        st.table(fundamentals)
+        <b>Company:</b> {data2['Company']}<br>
+        <b>Sector:</b> {data2['Sector']}<br>
+        <b>Industry:</b> {data2['Industry']}
+
+        </div>
+        """, unsafe_allow_html=True)
     
 
     # col1, col2 = st.columns(2)
@@ -236,37 +517,48 @@ if analyze_button:
     #     st.write(data2)
 
 
+   
+    # Stock Comparison
 
-    # ---------- Sector Comparison ----------
+    st.subheader(" Stock Comparison")
 
-    st.subheader(" Sector Comparison")
-
-    sector_data = {
-        "Company": [
-            data["Company"],
-            data2["Company"]
+    comparison_data = {
+        "Metric": [
+            "Current Price",
+            "High",
+            "Low",
+            "Market Cap",
+            "P/E Ratio",
+            "EPS",
+            "Dividend Yield",
+            "52W High",
+            "52W Low"
         ],
-        "Sector": [
-            data["Sector"],
-            data2["Sector"]
+        symbol1: [
+            data["Current Price"],
+            data["High"],
+            data["Low"],
+            data["Market Cap"],
+            data.get("PE Ratio"),
+            data.get("EPS"),
+            data.get("Dividend Yield"),
+            data.get("52W High"),
+            data.get("52W Low")
         ],
-        "Industry": [
-            data["Industry"],
-            data2["Industry"]
-        ]
+        symbol2: [
+            data2["Current Price"],
+            data2["High"],
+            data2["Low"],
+            data2["Market Cap"],
+            data2.get("PE Ratio"),
+            data2.get("EPS"),
+            data2.get("Dividend Yield"),
+            data2.get("52W High"),
+            data2.get("52W Low")
+        ],
     }
 
-    st.table(sector_data)
-
-    # Sector Comparison result
-
-    if data["Sector"] == data2["Sector"]:
-        st.success(f"Both companies belong to the {data['Sector']} sector.")
-
-    else:
-        st.warning(f"{data['Company']} and {data2['Company']} belong to different sectors.")
-
-
+    st.table(comparison_data)
 
     # ---------- Fundamental Health Comparison ----------
 
@@ -276,58 +568,63 @@ if analyze_button:
 
     with col1:
 
-        st.metric("Debt To Equity",data.get("Debt To Equity") or "N/A")
+        st.markdown(f"{symbol1}")
 
-        st.metric("ROE",data.get("ROE") or "N/A")
+        m1,m2,m3 = st.columns(3)
 
-        st.metric("Revenue Growth",data.get("Revenue Growth") or "N/A")
+        with m1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Debt/Equity</div>
+                <div class="metric-value">{data.get("Debt To Equity","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">ROE</div>
+                <div class="metric-value">{data.get("ROE","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with m3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Revenue Growth</div>
+                <div class="metric-value">{data.get("Revenue Growth","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     with col2:
 
-        st.metric("Debt To Equity",data2.get("Debt To Equity") or "N/A")
+        st.markdown(f"{symbol2}")
 
-        st.metric("ROE",data2.get("ROE") or "N/A")
+        m1,m2,m3 = st.columns(3)
 
-        st.metric("Revenue Growth",data2.get("Revenue Growth") or "N/A")
+        with m1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Debt/Equity</div>
+                <div class="metric-value">{data2.get("Debt To Equity","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
+        with m2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">ROE</div>
+                <div class="metric-value">{data2.get("ROE","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-
-   
-    # Stock Comparison
-
-    st.subheader(" Stock Comparison")
-
-    comparison_data = {
-        "Metric": [
-            "Current Price",
-            "Open",
-            "High",
-            "Low",
-            "Previous Close",
-            "Volume",
-            "Market Cap",
-        ],
-        symbol1: [
-            data["Current Price"],
-            data["Open"],
-            data["High"],
-            data["Low"],
-            data["Previous Close"],
-            data["Volume"],
-            data["Market Cap"],
-        ],
-        symbol2: [
-            data2["Current Price"],
-            data2["Open"],
-            data2["High"],
-            data2["Low"],
-            data2["Previous Close"],
-            data2["Volume"],
-            data2["Market Cap"],
-        ],
-    }
-
-    st.table(comparison_data)
+        with m3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-title">Revenue Growth</div>
+                <div class="metric-value">{data2.get("Revenue Growth","N/A")}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     
     # Quick Comparison
@@ -654,7 +951,12 @@ if analyze_button:
 
             st.subheader("Investment Confidence Score")
 
-            st.metric("Confidence", f"{confidence:.0f}/100")
+            st.markdown(f"""
+            <div class="confidence-card">
+                <div class="confidence-title">Confidence Score</div>
+                <div class="confidence-value">{confidence:.0f}/100</div>
+            </div>
+            """, unsafe_allow_html=True)
 
             # ---------- AI Investment Scorecard ----------
 
@@ -680,13 +982,28 @@ if analyze_button:
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Financial Health", f"{score}/100")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Financial Health</div>
+                    <div class="metric-value">{score}/100</div>
+                </div>
+                """, unsafe_allow_html=True)
 
             with col2:
-                st.metric("Technical Strength", f"{technical_score}/100")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Technical Strength</div>
+                    <div class="metric-value">{technical_score}/100</div>
+                </div>
+                """, unsafe_allow_html=True)
 
             with col3:
-                st.metric("Confidence", f"{confidence:.0f}/100")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Confidence</div>
+                    <div class="metric-value">{confidence:.0f}/100</div>
+                </div>
+                """, unsafe_allow_html=True)
     
 
             st.progress(int(overall_score))
