@@ -3,7 +3,8 @@ import plotly.graph_objects as go
 import yfinance as yf
 from textblob import TextBlob
 from datetime import datetime       # For Current Time
-import pytz                         # For Indian Timezone                
+import pytz                         # For Indian Timezone      
+import plotly.express as px         # For Plotly Express charts
 
 from services.stock_services import (
     get_stock_info,
@@ -21,8 +22,16 @@ from services.watchlist_service import (
     get_watchlist
 )
 
-# Page Configuration
+# Portfolio database functions
+from services.portfolio_service import (
+    init_portfolio_db,
+    add_to_portfolio,
+    get_portfolio
+)
 
+
+
+# Page Configuration
 
 st.set_page_config(
     page_title="Financial Research AI",
@@ -31,6 +40,9 @@ st.set_page_config(
 
 # Create watchlist database if not exists init_db()
 init_db()
+
+# Create portfolio database if not exists init_portfolio_db()
+init_portfolio_db()
 
 st.title("Financial Research AI Agent")
 
@@ -98,7 +110,7 @@ else:
 #     ],
 # )
 
-# Sidebar Controls improvement
+# ---------- Sidebar Controls improvement ----------
 with st.sidebar:
 
     st.title(" Stock Controls ")
@@ -143,9 +155,156 @@ with st.sidebar:
         st.info("No Stock in Watchlist yet!")
 
 
+    # ---------- Adding Portfolio Controls ---------- 
+    st.markdown("---")
+    st.subheader("Portfolio Tracker")
 
-# Analyze Button
+    portfolio_symbol = st.text_input("Portfolio Stock",value="RELIANCE.NS")
 
+    portfolio_qty = st.number_input("Quantity",min_value=1,value=1)
+
+    portfolio_buy_price = st.number_input("Buy Price (₹)",min_value=1.0,value=1000.0)
+
+    if st.button("Add To Portfolio",use_container_width=True):
+        add_to_portfolio(
+            portfolio_symbol,
+            portfolio_qty,
+            portfolio_buy_price
+        )
+
+    st.success(f"{portfolio_symbol} added to Portfolio")
+
+    
+    # ---------- Portfolio DashBoard ----------
+
+    st.subheader("Portfolio Dashboard")
+
+    portfolio_data = get_portfolio()
+
+    if portfolio_data:
+
+        portfolio_table = []
+
+        total_investment = 0
+        total_current_value = 0
+
+        for stock in portfolio_data:
+
+            symbol = stock[0]
+            quantity = stock[1]
+            buy_price = stock[2]
+
+            current_data = get_stock_info(symbol)
+
+            current_price = current_data["Current Price"]
+
+            investment = quantity * buy_price
+            current_value = quantity * current_price
+
+            profit_loss = current_value - investment
+
+            total_investment += investment
+            total_current_value += current_value
+
+            portfolio_table.append({
+                "Stock": symbol,
+                "Quantity": quantity,
+                "Buy Price": f"₹{buy_price:.2f}",
+                "Current Price": f"₹{current_price:.2f}",
+                "Investment": f"₹{investment:.2f}",
+                "Current Value": f"₹{current_value:.2f}",
+                "Profit/Loss": f"₹{profit_loss:.2f}"
+            })
+
+        st.dataframe(portfolio_table,use_container_width=True)
+
+        total_profit = (total_current_value - total_investment)
+
+        portfolio_return = (total_profit / total_investment) * 100
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Total Investment",f"₹{total_investment:,.0f}")
+
+        with col2:
+            st.metric("Current Value",f"₹{total_current_value:,.0f}")
+
+        with col3:
+            st.metric("Portfolio Return",f"{portfolio_return:.2f}%")
+
+        # Finding Top Gainer / Loser
+
+        best_stock = max(portfolio_table,
+            key=lambda x: float(
+                x["Profit/Loss"]
+                .replace("₹", "")
+                .replace(",", "")
+            )
+        )
+
+        worst_stock = min(portfolio_table,
+            key=lambda x: float(
+                x["Profit/Loss"]
+                .replace("₹", "")
+                .replace(",", "")
+            )
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.success(f"Top Gainer: {best_stock['Stock']}")
+            st.write(f"Profit: {best_stock['Profit/Loss']}")
+
+        with col2:
+            st.error(f"Top Loser: {worst_stock['Stock']}")
+            st.write(f"Profit: {worst_stock['Profit/Loss']}")
+
+        
+        st.subheader("SIP Goal Planner")
+
+        goal_amount = st.number_input("Target Amount (₹)",min_value=10000,value=1000000)
+
+        years = st.number_input("Investment Duration (Years)",min_value=1,value=10)
+
+        expected_return = st.slider("Expected Annual Return (%)",1,30,12)
+
+        monthly_rate = expected_return / 100 / 12
+        months = years * 12
+
+        sip = (goal_amount * monthly_rate / (((1 + monthly_rate) ** months) - 1))
+        sip = sip / (1 + monthly_rate)
+
+        st.success(f"Required Monthly SIP: ₹{sip:,.0f}")
+
+        st.subheader("Portfolio Allocation")
+
+        allocation_data = []
+
+        for stock in portfolio_data:
+
+            symbol = stock[0]
+            quantity = stock[1]
+            buy_price = stock[2]
+
+            value = quantity * buy_price
+
+            allocation_data.append({"Stock": symbol,"Value": value})
+
+        if allocation_data:
+            fig = px.pie(allocation_data,names="Stock",values="Value",title="Portfolio Allocation")
+
+            st.plotly_chart(fig,use_container_width=True)
+
+
+
+    else:
+        st.info("No stocks in portfolio yet.")
+
+
+
+# ---------- Analyze Button ----------
 
 if analyze_button:
 
